@@ -1,9 +1,12 @@
 import curses
-import ctypes
+import platform
 import textwrap
 from collections import namedtuple
 from dataclasses import dataclass, field
 from typing import Any, Container, Generic, Iterable, List, Optional, Sequence, Tuple, TypeVar, Union
+
+if platform.system()=='Windows':
+    import ctypes
 
 __all__ = ["Picker", "pick", "Option"]
 
@@ -227,11 +230,14 @@ class Picker(Generic[OPTION_T]):
 
     def _start(self, screen: "curses._CursesWindow"):
         self.config_curses()
-        activeWindowHwnd = ctypes.windll.user32.GetForegroundWindow()
-        rect = RECT()
-        ctypes.windll.user32.GetWindowRect(activeWindowHwnd, ctypes.byref(rect))
-        ctypes.windll.user32.SetWindowPos(activeWindowHwnd, 0, rect.left, rect.top, (rect.right-rect.left) + 1, (rect.bottom-rect.top) + 1, 0)
-        ctypes.windll.user32.SetWindowPos(activeWindowHwnd, 0, rect.left, rect.top, (rect.right-rect.left) + 0, (rect.bottom-rect.top) + 0, 0)
+        
+        if platform.system()=='Windows':
+            activeWindowHwnd = ctypes.windll.user32.GetForegroundWindow()
+            rect = RECT()
+            ctypes.windll.user32.GetWindowRect(activeWindowHwnd, ctypes.byref(rect))
+            ctypes.windll.user32.SetWindowPos(activeWindowHwnd, 0, rect.left, rect.top, (rect.right-rect.left) + 1, (rect.bottom-rect.top) + 1, 0)
+            ctypes.windll.user32.SetWindowPos(activeWindowHwnd, 0, rect.left, rect.top, (rect.right-rect.left) + 0, (rect.bottom-rect.top) + 0, 0)
+        
         return self.run_loop(screen, self.position)
 
     def start(self):
