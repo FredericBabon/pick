@@ -230,6 +230,7 @@ class Picker(Generic[OPTION_T]):
         activeWindowHwnd = ctypes.windll.user32.GetForegroundWindow()
         rect = RECT()
         ctypes.windll.user32.GetWindowRect(activeWindowHwnd, ctypes.byref(rect))
+        ctypes.windll.user32.SetWindowPos(activeWindowHwnd, 0, rect.left, rect.top, (rect.right-rect.left) + 1, (rect.bottom-rect.top) + 1, 0)
         ctypes.windll.user32.SetWindowPos(activeWindowHwnd, 0, rect.left, rect.top, (rect.right-rect.left) + 0, (rect.bottom-rect.top) + 0, 0)
         return self.run_loop(screen, self.position)
 
