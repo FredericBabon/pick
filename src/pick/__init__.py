@@ -7,20 +7,9 @@ from typing import Any, Container, Generic, Iterable, List, Optional, Sequence, 
 
 if platform.system()=='Windows':
     import ctypes
+    from ctypes.wintypes import RECT
 
 __all__ = ["Picker", "pick", "Option"]
-
-
-class RECT(ctypes.Structure):
-    """A nice wrapper of the RECT structure.
-
-    Microsoft Documentation:
-    https://msdn.microsoft.com/en-us/library/windows/desktop/dd162897(v=vs.85).aspx
-    """
-    _fields_ = [('left', ctypes.c_long),
-                ('top', ctypes.c_long),
-                ('right', ctypes.c_long),
-                ('bottom', ctypes.c_long)]
 
 @dataclass
 class Option:
@@ -29,6 +18,7 @@ class Option:
     description: Optional[str] = None
     enabled: bool = True
 
+RESIZE_PIX = 10
 
 KEYS_ENTER = (curses.KEY_ENTER, ord("\n"), ord("\r"))
 KEYS_UP = (curses.KEY_UP, ord("k"))
@@ -57,6 +47,9 @@ class Picker(Generic[OPTION_T]):
     position: Position = Position(0, 0)
     clear_screen: bool = True
     quit_keys: Optional[Union[Container[int], Iterable[int]]] = None
+    activeWindowHwnd = None
+    rect = None
+    isResized = False
 
     def __post_init__(self) -> None:
         if len(self.options) == 0:
@@ -198,6 +191,13 @@ class Picker(Generic[OPTION_T]):
     ) -> Union[List[PICK_RETURN_T], PICK_RETURN_T]:
         while True:
             self.draw(screen)
+            
+            if platform.system()=='Windows' and not self.isResized:
+                ctypes.windll.user32.GetWindowRect(self.activeWindowHwnd, ctypes.byref(self.rect))
+                ctypes.windll.user32.SetWindowPos(self.activeWindowHwnd, 0, self.rect.left, self.rect.top, (self.rect.right-self.rect.left) + RESIZE_PIX, (self.rect.bottom-self.rect.top) + RESIZE_PIX, 0)                    
+                ctypes.windll.user32.SetWindowPos(self.activeWindowHwnd, 0, self.rect.left, self.rect.top, (self.rect.right-self.rect.left), (self.rect.bottom-self.rect.top), 0)
+                self.isResized = True
+            
             c = screen.getch()
             if self.quit_keys is not None and c in self.quit_keys:
                 if self.multiselect:
@@ -205,8 +205,10 @@ class Picker(Generic[OPTION_T]):
                 else:
                     return None, -1
             elif c in KEYS_UP:
+                self.isResized = False
                 self.move_up()
             elif c in KEYS_DOWN:
+                self.isResized = False
                 self.move_down()
             elif c in KEYS_ENTER:
                 if (
@@ -232,11 +234,10 @@ class Picker(Generic[OPTION_T]):
         self.config_curses()
         
         if platform.system()=='Windows':
-            activeWindowHwnd = ctypes.windll.user32.GetForegroundWindow()
-            rect = RECT()
-            ctypes.windll.user32.GetWindowRect(activeWindowHwnd, ctypes.byref(rect))
-            ctypes.windll.user32.SetWindowPos(activeWindowHwnd, 0, rect.left, rect.top, (rect.right-rect.left) + 1, (rect.bottom-rect.top) + 1, 0)
-            ctypes.windll.user32.SetWindowPos(activeWindowHwnd, 0, rect.left, rect.top, (rect.right-rect.left) + 0, (rect.bottom-rect.top) + 0, 0)
+            isResized = False
+            screen.nodelay(True)
+            self.activeWindowHwnd = ctypes.windll.user32.GetForegroundWindow()
+            self.rect = RECT()
         
         return self.run_loop(screen, self.position)
 
