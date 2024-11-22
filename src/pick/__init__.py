@@ -1,4 +1,5 @@
 import curses
+import ctypes
 import textwrap
 from collections import namedtuple
 from dataclasses import dataclass, field
@@ -6,6 +7,17 @@ from typing import Any, Container, Generic, Iterable, List, Optional, Sequence, 
 
 __all__ = ["Picker", "pick", "Option"]
 
+
+class RECT(ctypes.Structure):
+    """A nice wrapper of the RECT structure.
+
+    Microsoft Documentation:
+    https://msdn.microsoft.com/en-us/library/windows/desktop/dd162897(v=vs.85).aspx
+    """
+    _fields_ = [('left', ctypes.c_long),
+                ('top', ctypes.c_long),
+                ('right', ctypes.c_long),
+                ('bottom', ctypes.c_long)]
 
 @dataclass
 class Option:
@@ -215,6 +227,10 @@ class Picker(Generic[OPTION_T]):
 
     def _start(self, screen: "curses._CursesWindow"):
         self.config_curses()
+        activeWindowHwnd = ctypes.windll.user32.GetForegroundWindow()
+        rect = RECT()
+        ctypes.windll.user32.GetWindowRect(activeWindowHwnd, ctypes.byref(rect))
+        ctypes.windll.user32.SetWindowPos(activeWindowHwnd, 0, rect.left, rect.top, (rect.right-rect.left) + 20, (rect.bottom-rect.top) + 20, 0)
         return self.run_loop(screen, self.position)
 
     def start(self):
