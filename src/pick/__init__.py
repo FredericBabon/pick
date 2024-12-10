@@ -239,6 +239,9 @@ class Picker(Generic[OPTION_T]):
             self.activeWindowHwnd = ctypes.windll.user32.GetForegroundWindow()
             self.rect = RECT()
         
+        #save screen
+        self.screen = screen
+        
         return self.run_loop(screen, self.position)
 
     def start(self):
