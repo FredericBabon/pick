@@ -233,9 +233,9 @@ class Picker(Generic[OPTION_T]):
     def _start(self, screen: "curses._CursesWindow"):
         self.config_curses()
         
-        screen.nodelay(True)
         if platform.system()=='Windows':
             isResized = False
+            screen.nodelay(True)
             self.activeWindowHwnd = ctypes.windll.user32.GetForegroundWindow()
             self.rect = RECT()
         
